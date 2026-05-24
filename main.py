@@ -7,7 +7,7 @@ import smtplib
 import random
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
 import os
 
@@ -20,6 +20,8 @@ RECEIVER_EMAIL     = os.getenv("RECEIVER_EMAIL")
 APP_PASSWORD       = os.getenv("APP_PASSWORD")
 ACTIVE_HOURS_START = int(os.getenv("ACTIVE_HOURS_START", 8))
 ACTIVE_HOURS_END   = int(os.getenv("ACTIVE_HOURS_END", 22))
+
+IST = timezone(timedelta(hours=5, minutes=30))
 
 # ─── VALIDATION ────────────────────────────────────────────────────────────────
 
@@ -74,15 +76,19 @@ Is it worth it?""",
 
 # ─── CORE ──────────────────────────────────────────────────────────────────────
 
+def now_ist() -> datetime:
+    return datetime.now(IST)
+
 def is_active_hours() -> bool:
-    hour = datetime.utcnow().hour + 5  # UTC → IST (UTC+5:30, simplified)
-    hour = hour % 24
+    hour = now_ist().hour
     return ACTIVE_HOURS_START <= hour < ACTIVE_HOURS_END
 
 
 def send_reminder():
+    ist_time = now_ist()
+
     if not is_active_hours():
-        print(f"[{datetime.utcnow():%H:%M} UTC] Outside active hours, skipping.")
+        print(f"[{ist_time:%H:%M} IST] Outside active hours ({ACTIVE_HOURS_START}:00–{ACTIVE_HOURS_END}:00), skipping.")
         return
 
     body = random.choice(MESSAGES)
@@ -97,9 +103,9 @@ def send_reminder():
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, APP_PASSWORD)
             server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
-        print(f"[{datetime.utcnow():%H:%M} UTC] ✅ Reminder sent.")
+        print(f"[{ist_time:%H:%M} IST] ✅ Reminder sent.")
     except Exception as e:
-        print(f"[{datetime.utcnow():%H:%M} UTC] ❌ Failed: {e}")
+        print(f"[{ist_time:%H:%M} IST] ❌ Failed: {e}")
 
 
 if __name__ == "__main__":
