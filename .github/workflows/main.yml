@@ -38,7 +38,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Send reminder
-        run: python reminder.py
+        run: python main.py
         env:
           SENDER_EMAIL:       ${{ secrets.SENDER_EMAIL }}
           RECEIVER_EMAIL:     ${{ secrets.RECEIVER_EMAIL }}
