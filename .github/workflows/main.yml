@@ -2,32 +2,14 @@ name: Focus Reminder
 
 on:
   schedule:
-    - cron: '30 4  * * *'   # 10:00 AM IST
-    - cron: '10 5  * * *'   # 10:40 AM IST
-    - cron: '50 5  * * *'   # 11:20 AM IST
-    - cron: '30 6  * * *'   # 12:00 PM IST
-    - cron: '10 7  * * *'   # 12:40 PM IST
-    - cron: '50 7  * * *'   #  1:20 PM IST
-    - cron: '30 8  * * *'   #  2:00 PM IST
-    - cron: '10 9  * * *'   #  2:40 PM IST
-    - cron: '50 9  * * *'   #  3:20 PM IST
-    - cron: '30 10 * * *'   #  4:00 PM IST
-    - cron: '10 11 * * *'   #  4:40 PM IST
-    - cron: '50 11 * * *'   #  5:20 PM IST
-    - cron: '30 12 * * *'   #  6:00 PM IST
-    - cron: '10 13 * * *'   #  6:40 PM IST
-    - cron: '50 13 * * *'   #  7:20 PM IST
-    - cron: '30 14 * * *'   #  8:00 PM IST
-    - cron: '10 15 * * *'   #  8:40 PM IST
-    - cron: '50 15 * * *'   #  9:20 PM IST
-    - cron: '30 16 * * *'   # 10:00 PM IST
-    - cron: '10 17 * * *'   # 10:40 PM IST
-    - cron: '50 17 * * *'   # 11:20 PM IST
-  workflow_dispatch:          # allows manual trigger from GitHub UI
+    - cron: '30 4  * * *'   # 10:00 AM IST — runs till ~4:00 PM IST
+    - cron: '30 10 * * *'   # 4:00 PM IST  — runs till 11:00 PM IST
+  workflow_dispatch:        # manual trigger from GitHub UI
 
 jobs:
   send-reminder:
     runs-on: ubuntu-latest
+    timeout-minutes: 360    # 6 hours — enough for 10 AM–11 PM IST (13 hrs max, but job exits cleanly at end time)
 
     steps:
       - name: Checkout repo

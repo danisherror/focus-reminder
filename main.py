@@ -1,10 +1,11 @@
 """
-Focus Reminder — sends one "Is it worth it?" email per GitHub Actions trigger.
+Focus Reminder — loops every 40 minutes between active hours.
 Setup: pip install python-dotenv
 """
 
 import smtplib
 import random
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone, timedelta
@@ -18,9 +19,10 @@ load_dotenv()
 SENDER_EMAIL       = os.getenv("SENDER_EMAIL")
 RECEIVER_EMAIL     = os.getenv("RECEIVER_EMAIL")
 APP_PASSWORD       = os.getenv("APP_PASSWORD")
-ACTIVE_HOURS_START = int(os.getenv("ACTIVE_HOURS_START", 8))
-ACTIVE_HOURS_END   = int(os.getenv("ACTIVE_HOURS_END", 22))
+ACTIVE_HOURS_START = int(os.getenv("ACTIVE_HOURS_START", 10))
+ACTIVE_HOURS_END   = int(os.getenv("ACTIVE_HOURS_END", 23))
 
+INTERVAL_MINUTES = 40
 IST = timezone(timedelta(hours=5, minutes=30))
 
 # ─── VALIDATION ────────────────────────────────────────────────────────────────
@@ -83,14 +85,8 @@ def is_active_hours() -> bool:
     hour = now_ist().hour
     return ACTIVE_HOURS_START <= hour < ACTIVE_HOURS_END
 
-
 def send_reminder():
     ist_time = now_ist()
-
-    if not is_active_hours():
-        print(f"[{ist_time:%H:%M} IST] Outside active hours ({ACTIVE_HOURS_START}:00–{ACTIVE_HOURS_END}:00), skipping.")
-        return
-
     body = random.choice(MESSAGES)
 
     msg = MIMEMultipart("alternative")
@@ -107,6 +103,24 @@ def send_reminder():
     except Exception as e:
         print(f"[{ist_time:%H:%M} IST] ❌ Failed: {e}")
 
-
 if __name__ == "__main__":
-    send_reminder()
+    print(f"Starting loop. Active hours: {ACTIVE_HOURS_START}:00–{ACTIVE_HOURS_END}:00 IST")
+
+    while True:
+        ist_time = now_ist()
+
+        if is_active_hours():
+            send_reminder()
+            print(f"[{ist_time:%H:%M} IST] Sleeping {INTERVAL_MINUTES} mins...")
+            time.sleep(INTERVAL_MINUTES * 60)
+        else:
+            # Outside active hours — if we've passed the end, exit cleanly
+            if ist_time.hour >= ACTIVE_HOURS_END:
+                print(f"[{ist_time:%H:%M} IST] Past end time. Exiting.")
+                break
+            # Before start time (shouldn't happen if cron fires at 10 AM, but safe)
+            seconds_until_start = (
+                (ACTIVE_HOURS_START - ist_time.hour) * 3600 - ist_time.minute * 60 - ist_time.second
+            )
+            print(f"[{ist_time:%H:%M} IST] Before active hours. Waiting {seconds_until_start}s...")
+            time.sleep(seconds_until_start)
