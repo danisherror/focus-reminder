@@ -1,11 +1,9 @@
 """
-Focus Reminder — sends a "Is it worth it?" email at scheduled intervals.
-Setup: pip install schedule python-dotenv
+Focus Reminder — sends one "Is it worth it?" email per GitHub Actions trigger.
+Setup: pip install python-dotenv
 """
 
 import smtplib
-import schedule
-import time
 import random
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -17,12 +15,11 @@ load_dotenv()
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 
-SENDER_EMAIL           = os.getenv("SENDER_EMAIL")
-RECEIVER_EMAIL         = os.getenv("RECEIVER_EMAIL")
-APP_PASSWORD           = os.getenv("APP_PASSWORD")
-SEND_INTERVAL_MINUTES  = int(os.getenv("SEND_INTERVAL_MINUTES", 45))
-ACTIVE_HOURS_START     = int(os.getenv("ACTIVE_HOURS_START", 10))
-ACTIVE_HOURS_END       = int(os.getenv("ACTIVE_HOURS_END", 23))
+SENDER_EMAIL       = os.getenv("SENDER_EMAIL")
+RECEIVER_EMAIL     = os.getenv("RECEIVER_EMAIL")
+APP_PASSWORD       = os.getenv("APP_PASSWORD")
+ACTIVE_HOURS_START = int(os.getenv("ACTIVE_HOURS_START", 8))
+ACTIVE_HOURS_END   = int(os.getenv("ACTIVE_HOURS_END", 22))
 
 # ─── VALIDATION ────────────────────────────────────────────────────────────────
 
@@ -35,7 +32,7 @@ missing = [k for k, v in {
 if missing:
     raise EnvironmentError(
         f"Missing required environment variables: {', '.join(missing)}\n"
-        "Copy .env.example to .env and fill in your values."
+        "Add them in GitHub repo → Settings → Secrets and variables → Actions."
     )
 
 # ─── MESSAGES ──────────────────────────────────────────────────────────────────
@@ -78,13 +75,14 @@ Is it worth it?""",
 # ─── CORE ──────────────────────────────────────────────────────────────────────
 
 def is_active_hours() -> bool:
-    hour = datetime.now().hour
+    hour = datetime.utcnow().hour + 5  # UTC → IST (UTC+5:30, simplified)
+    hour = hour % 24
     return ACTIVE_HOURS_START <= hour < ACTIVE_HOURS_END
 
 
 def send_reminder():
     if not is_active_hours():
-        print(f"[{datetime.now():%H:%M}] Outside active hours, skipping.")
+        print(f"[{datetime.utcnow():%H:%M} UTC] Outside active hours, skipping.")
         return
 
     body = random.choice(MESSAGES)
@@ -99,23 +97,10 @@ def send_reminder():
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(SENDER_EMAIL, APP_PASSWORD)
             server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
-        print(f"[{datetime.now():%H:%M}] ✅ Reminder sent.")
+        print(f"[{datetime.utcnow():%H:%M} UTC] ✅ Reminder sent.")
     except Exception as e:
-        print(f"[{datetime.now():%H:%M}] ❌ Failed: {e}")
-
-
-def main():
-    print(f"Focus Reminder started. Sending every {SEND_INTERVAL_MINUTES} min "
-          f"between {ACTIVE_HOURS_START}:00–{ACTIVE_HOURS_END}:00.")
-
-    send_reminder()
-
-    schedule.every(SEND_INTERVAL_MINUTES).minutes.do(send_reminder)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(30)
+        print(f"[{datetime.utcnow():%H:%M} UTC] ❌ Failed: {e}")
 
 
 if __name__ == "__main__":
-    main()
+    send_reminder()
