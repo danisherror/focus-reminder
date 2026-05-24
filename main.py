@@ -1,6 +1,6 @@
 """
 Focus Reminder — sends a "Is it worth it?" email at scheduled intervals.
-Setup: pip install apscheduler schedule
+Setup: pip install schedule python-dotenv
 """
 
 import smtplib
@@ -10,18 +10,33 @@ import random
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # ─── CONFIG ────────────────────────────────────────────────────────────────────
 
-SENDER_EMAIL    = "your_gmail@gmail.com"       # Gmail you're sending FROM
-RECEIVER_EMAIL  = "your_phone_email@gmail.com" # Gmail that notifies your phone
-APP_PASSWORD    = "xxxx xxxx xxxx xxxx"        # Gmail App Password (see README)
+SENDER_EMAIL           = os.getenv("SENDER_EMAIL")
+RECEIVER_EMAIL         = os.getenv("RECEIVER_EMAIL")
+APP_PASSWORD           = os.getenv("APP_PASSWORD")
+SEND_INTERVAL_MINUTES  = int(os.getenv("SEND_INTERVAL_MINUTES", 45))
+ACTIVE_HOURS_START     = int(os.getenv("ACTIVE_HOURS_START", 10))
+ACTIVE_HOURS_END       = int(os.getenv("ACTIVE_HOURS_END", 23))
 
-SEND_INTERVAL_MINUTES = 60   # How often to send (e.g. 60 = every hour)
+# ─── VALIDATION ────────────────────────────────────────────────────────────────
 
-# Active hours — won't send outside this range (24h format)
-ACTIVE_HOURS_START = 8   # 8 AM
-ACTIVE_HOURS_END   = 22  # 10 PM
+missing = [k for k, v in {
+    "SENDER_EMAIL": SENDER_EMAIL,
+    "RECEIVER_EMAIL": RECEIVER_EMAIL,
+    "APP_PASSWORD": APP_PASSWORD,
+}.items() if not v]
+
+if missing:
+    raise EnvironmentError(
+        f"Missing required environment variables: {', '.join(missing)}\n"
+        "Copy .env.example to .env and fill in your values."
+    )
 
 # ─── MESSAGES ──────────────────────────────────────────────────────────────────
 
@@ -93,7 +108,6 @@ def main():
     print(f"Focus Reminder started. Sending every {SEND_INTERVAL_MINUTES} min "
           f"between {ACTIVE_HOURS_START}:00–{ACTIVE_HOURS_END}:00.")
 
-    # Send one immediately on startup
     send_reminder()
 
     schedule.every(SEND_INTERVAL_MINUTES).minutes.do(send_reminder)
