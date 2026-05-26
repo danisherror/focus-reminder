@@ -2,14 +2,12 @@ name: Focus Reminder
 
 on:
   schedule:
-    - cron: '30 4  * * *'   # 10:00 AM IST — runs till ~4:00 PM IST
-    - cron: '30 10 * * *'   # 4:00 PM IST  — runs till 11:00 PM IST
-  workflow_dispatch:        # manual trigger from GitHub UI
+    - cron: '0 */6 * * *'   # Every 6 hours
+  workflow_dispatch:
 
 jobs:
   send-reminder:
     runs-on: ubuntu-latest
-    timeout-minutes: 360    # 6 hours — enough for 10 AM–11 PM IST (13 hrs max, but job exits cleanly at end time)
 
     steps:
       - name: Checkout repo
@@ -26,8 +24,6 @@ jobs:
       - name: Send reminder
         run: python main.py
         env:
-          SENDER_EMAIL:       ${{ secrets.SENDER_EMAIL }}
-          RECEIVER_EMAIL:     ${{ secrets.RECEIVER_EMAIL }}
-          APP_PASSWORD:       ${{ secrets.APP_PASSWORD }}
-          ACTIVE_HOURS_START: ${{ secrets.ACTIVE_HOURS_START }}
-          ACTIVE_HOURS_END:   ${{ secrets.ACTIVE_HOURS_END }}
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
